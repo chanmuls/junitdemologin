@@ -24,10 +24,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
-public class AuthServiceTest13 {
+public class AuthServiceTest14 {
 
     public static final String USER_PASSWORD = "userPassword";
     public static final String USER_ID = "userId";
+    public static final String NO_USER_ID = "noUserId";
     private AuthService authService;
 
     @Before
@@ -44,11 +45,11 @@ public class AuthServiceTest13 {
     @Test
     public void whenUserNotFound_throwNotExistingUserEx() {
         // 삼각측량: 다른 값으로 테스트를 여러게 수행
-        assertExceptionthrown("noUserId", USER_PASSWORD, NotExistingUserException.class);
-        assertExceptionthrown("noUserId" + 2, USER_PASSWORD, NotExistingUserException.class);
+        assertExceptionthrown(NO_USER_ID, USER_PASSWORD, NotExistingUserException.class);
+        assertExceptionthrown(NO_USER_ID + 2, USER_PASSWORD, NotExistingUserException.class);
 
         for (int i = 1; i <= 100; i++) {
-            assertExceptionthrown("noUserId" + i, USER_PASSWORD, NotExistingUserException.class);
+            assertExceptionthrown(NO_USER_ID + i, USER_PASSWORD, NotExistingUserException.class);
         }
     }
 
@@ -101,7 +102,19 @@ public class AuthServiceTest13 {
 //                throw new NotExistingUserException();
 //            }
 
-            throw new NotExistingUserException();
+            User user = getUserbyId(id);
+
+            if (user == null) {
+                throw new NotExistingUserException();
+            }
+
         }
+    }
+
+    private User getUserbyId(String id) {
+        return null;
+    }
+
+    private class User {
     }
 }

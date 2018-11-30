@@ -27,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class AuthServiceTest12 {
 
     public static final String USER_PASSWORD = "userPassword";
+    public static final String USER_ID = "userId";
     private AuthService authService;
 
     @Before
@@ -71,8 +72,8 @@ public class AuthServiceTest12 {
         assertIllegalArgExThrown("", USER_PASSWORD);
 
         // 패스워드 오류 로직
-        assertIllegalArgExThrown("userId", null);
-        assertIllegalArgExThrown("userId", "");
+        assertIllegalArgExThrown(USER_ID, null);
+        assertIllegalArgExThrown(USER_ID, "");
     }
 
     private void assertIllegalArgExThrown(String id, String password) {
