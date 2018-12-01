@@ -109,10 +109,10 @@ public class AuthServiceTest14 {
             }
 
         }
-    }
 
-    private User getUserbyId(String id) {
-        return null;
+        private User getUserbyId(String id) {
+            return null;
+        }
     }
 
     private class User {

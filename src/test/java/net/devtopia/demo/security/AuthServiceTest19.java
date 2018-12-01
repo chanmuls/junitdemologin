@@ -9,6 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.*;
 
 /**
  *
@@ -25,17 +26,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
-public class AuthServiceTest16 {
+public class AuthServiceTest19 {
 
     public static final String USER_PASSWORD = "userPassword";
     public static final String USER_ID = "userId";
     public static final String NO_USER_ID = "noUserId";
+    public static final String USER_WRONG_PASSWORD = "userWrongPassword";
+
     private AuthService authService;
+    private UserRepository mockUserRepository;
 
     @Before
     public void setUp() {
+        mockUserRepository = mock(UserRepository.class);
         // 중복 코드 제거
         authService = new AuthService();
+
+        authService.setUserRepository(mockUserRepository);
     }
 
     @Test
@@ -44,22 +51,25 @@ public class AuthServiceTest16 {
     }
 
     @Test
-    // 6. ID에 해당하는 User가 존재하는데, PW가 일치하지 않는 경우(정상에서 벗어난)
-    public void whenUserFoundButWrongPw_throwWrongPasswordEx() {
-        // ID와 PW가 일치하는 경우
-        givenUserExists(USER_ID, USER_PASSWORD);
+    // 3. ID 값이 비정상인 경우(쉬운, 정상에서 벗어난)
+    // 4. PW 값이 비정상인 경우(쉬운, 정상에서 벗어난)
+    public void givenInvalidId_throwIllegalArgEx() {
+        // 3. 예외처리 로직
 
-        // ID에 해당하는 User가 존재하는데, PW가 일치하지 않는 경우
-        assertExceptionthrown(USER_ID, "userWrongPassword", WrongPasswordException.class);
+        // 중복되는 코드는 메소드 추출을 하게 되는데 다른 부분을 로컯 변수로 만들고 추출하면 됨
+        // "userPassword" 은 매직 넘버이므로 상수로 교체 가능
 
-        // 실제로 ID가 존재하는지 유무
-        verifyUserFound(USER_ID);
+        // 아이디 오류 로직
+        assertIllegalArgExThrown(null, USER_PASSWORD);
+        assertIllegalArgExThrown("", USER_PASSWORD);
+
+        // 패스워드 오류 로직
+        assertIllegalArgExThrown(USER_ID, null);
+        assertIllegalArgExThrown(USER_ID, "");
     }
 
-    private void verifyUserFound(String userId) {
-    }
-
-    private void givenUserExists(String userId, String userPassword) {
+    private void assertIllegalArgExThrown(String id, String password) {
+        assertExceptionthrown(id, password, IllegalArgumentException.class);
     }
 
     @Test
@@ -89,30 +99,42 @@ public class AuthServiceTest16 {
     }
 
     @Test
-    // 3. ID 값이 비정상인 경우(쉬운, 정상에서 벗어난)
-    // 4. PW 값이 비정상인 경우(쉬운, 정상에서 벗어난)
-    public void givenInvalidId_throwIllegalArgEx() {
-        // 3. 예외처리 로직
+    // 6. ID에 해당하는 User가 존재하는데, PW가 일치하지 않는 경우(정상에서 벗어난)
+    public void whenUserFoundButWrongPw_throwWrongPasswordEx() {
+        // ID와 PW가 일치하는 경우
+        givenUserExists(USER_ID, USER_PASSWORD);
 
-        // 중복되는 코드는 메소드 추출을 하게 되는데 다른 부분을 로컯 변수로 만들고 추출하면 됨
-        // "userPassword" 은 매직 넘버이므로 상수로 교체 가능
+        // ID에 해당하는 User가 존재하는데, PW가 일치하지 않는 경우
+        assertExceptionthrown(USER_ID, USER_WRONG_PASSWORD, WrongPasswordException.class);
 
-        // 아이디 오류 로직
-        assertIllegalArgExThrown(null, USER_PASSWORD);
-        assertIllegalArgExThrown("", USER_PASSWORD);
-
-        // 패스워드 오류 로직
-        assertIllegalArgExThrown(USER_ID, null);
-        assertIllegalArgExThrown(USER_ID, "");
+        // 실제로 ID가 존재하는지 유무
+        verifyUserFound(USER_ID);
     }
 
-    private void assertIllegalArgExThrown(String id, String password) {
-        assertExceptionthrown(id, password, IllegalArgumentException.class);
+    private void verifyUserFound(String id) {
+        verify(mockUserRepository).findById(id);
+    }
+
+    private void givenUserExists(String id, String password) {
+        when(mockUserRepository.findById(id)).thenReturn(new User(id, password));
+    }
+
+    @Test
+    public void whenUserFoundAndRightPw_returnAuth() {
+        givenUserExists(USER_ID, USER_PASSWORD);
+        Authentication auth = authService.authenticate(USER_ID, USER_PASSWORD);
+        assertThat(auth.getId()).isEqualTo(USER_ID);
     }
 
     // 2. 객체 생성
     private class AuthService {
-        public void authenticate(String id, String password) {
+        private UserRepository userRepository;
+
+        public void setUserRepository(UserRepository userRepository) {
+            this.userRepository = userRepository;
+        }
+
+        public Authentication authenticate(String id, String password) {
             if (id == null || id.isEmpty()) {
                 throw new IllegalArgumentException();
             }
@@ -121,25 +143,20 @@ public class AuthServiceTest16 {
                 throw new IllegalArgumentException();
             }
 
-//            if (id.equals("noUserId") || id.equals("noUserId2")) {
-//                throw new NotExistingUserException();
-//            }
-
             User user = getUserbyId(id);
 
             if (user == null) {
                 throw new NotExistingUserException();
             }
 
-            throw new WrongPasswordException();
+            if (! user.matchPassword(password))
+                throw new WrongPasswordException();
+
+            return new Authentication(user.getId());
         }
 
         private User getUserbyId(String id) {
-            if (id.equals(USER_ID)) {
-                return new User(USER_ID, USER_PASSWORD);
-            }
-
-            return null;
+            return userRepository.findById(id);
         }
     }
 
@@ -169,6 +186,26 @@ public class AuthServiceTest16 {
 
         public void setPassword(String password) {
             this.password = password;
+        }
+
+        public boolean matchPassword(String password) {
+            return this.password.equals(password);
+        }
+    }
+
+    private interface UserRepository {
+        User findById(String id);
+    }
+
+    private class Authentication {
+        private String id;
+
+        public Authentication(String id) {
+            this.id = id;
+        }
+
+        public String getId() {
+            return id;
         }
     }
 }

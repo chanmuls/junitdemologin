@@ -9,6 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.*;
 
 /**
  *
@@ -25,17 +26,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
-public class AuthServiceTest16 {
+public class AuthServiceTest18 {
 
     public static final String USER_PASSWORD = "userPassword";
     public static final String USER_ID = "userId";
     public static final String NO_USER_ID = "noUserId";
+
     private AuthService authService;
+    private UserRepository mockUserRepository;
 
     @Before
     public void setUp() {
+        mockUserRepository = mock(UserRepository.class);
         // 중복 코드 제거
         authService = new AuthService();
+
+        authService.setUserRepository(mockUserRepository);
     }
 
     @Test
@@ -56,10 +62,13 @@ public class AuthServiceTest16 {
         verifyUserFound(USER_ID);
     }
 
-    private void verifyUserFound(String userId) {
+    private void verifyUserFound(String id) {
+        verify(mockUserRepository).findById(id);
     }
 
-    private void givenUserExists(String userId, String userPassword) {
+    private void givenUserExists(String id, String password) {
+
+        when(mockUserRepository.findById(id)).thenReturn(new User(id, password));
     }
 
     @Test
@@ -112,6 +121,12 @@ public class AuthServiceTest16 {
 
     // 2. 객체 생성
     private class AuthService {
+        private UserRepository userRepository;
+
+        public void setUserRepository(UserRepository userRepository) {
+            this.userRepository = userRepository;
+        }
+
         public void authenticate(String id, String password) {
             if (id == null || id.isEmpty()) {
                 throw new IllegalArgumentException();
@@ -135,11 +150,12 @@ public class AuthServiceTest16 {
         }
 
         private User getUserbyId(String id) {
-            if (id.equals(USER_ID)) {
-                return new User(USER_ID, USER_PASSWORD);
-            }
-
-            return null;
+            return userRepository.findById(id);
+//        if (id.equals(USER_ID)) {
+//            return new User(USER_ID, USER_PASSWORD);
+//        }
+//
+//        return null;
         }
     }
 
@@ -170,5 +186,9 @@ public class AuthServiceTest16 {
         public void setPassword(String password) {
             this.password = password;
         }
+    }
+
+    private interface UserRepository {
+        User findById(String id);
     }
 }
